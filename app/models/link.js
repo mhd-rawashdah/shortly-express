@@ -2,6 +2,8 @@ var db = require('../config');
 var Click = require('./click');
 var crypto = require('crypto');
 
+// this model represent the table Links in the db
+
 var Link = db.Model.extend({
   tableName: 'urls',
   hasTimestamps: true,

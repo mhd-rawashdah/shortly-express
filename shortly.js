@@ -2,6 +2,7 @@ var express = require('express');
 var util = require('./lib/utility');
 var partials = require('express-partials');
 var bodyParser = require('body-parser');
+var bcrypt = require('bcrypt-nodejs');
 
 
 var db = require('./app/config');
@@ -23,25 +24,21 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(__dirname + '/public'));
 
 
-app.get('/', 
-function(req, res) {
-  res.render('index');
+app.get('/', function(req, res) {
+  res.render('login');
 });
 
-app.get('/create', 
-function(req, res) {
-  res.render('index');
+app.get('/create', function(req, res) {
+  res.render('login');
 });
 
-app.get('/links', 
-function(req, res) {
+app.get('/links', function(req, res) {
   Links.reset().fetch().then(function(links) {
     res.status(200).send(links.models);
   });
 });
 
-app.post('/links', 
-function(req, res) {
+app.post('/links', function(req, res) {
   var uri = req.body.url;
 
   if (!util.isValidUrl(uri)) {
@@ -76,7 +73,55 @@ function(req, res) {
 // Write your authentication routes here
 /************************************************************/
 
+app.get('/login', function(req, res){
+  res.render('login');
+});
 
+app.post('/login', function(req, res){
+  // check if the username and password exist or not 
+  util.isUserExist(req.body.username, function(model){
+    if(model){
+      bcrypt.compare(req.body.password, model.get('password'), function(err, result) {
+        if(result){
+          // render the index
+          res.render('index');
+        } else {
+          res.send('password or username not correct')
+        }
+      });
+    } else {
+      res.send('username not found');
+    }
+  })
+
+});
+
+//get requst to signup  and render the signup page
+app.get('/signup', function(req, res){
+  res.render('signup');
+});
+
+app.post('/signup', function(req, res){
+  // to encryt the password
+  var hashPassword = '';
+  util.hashPassword(req.body.password, function(hash){
+    hashPassword = hash;
+  })
+
+  // check on the user exist or not
+   util.isUserExist(req.body.username, function(model){
+    if (!model) {
+      // add the data to the user table
+      new User({ username: req.body.username, password: hashPassword}).save().then(function(){
+        res.render('index');
+      });
+    } else {
+      console.log('The User Already exist');
+       res.send('The User Already exist');
+    }
+   });
+    
+});
 
 /************************************************************/
 // Handle the wildcard route last - if all other routes fail
