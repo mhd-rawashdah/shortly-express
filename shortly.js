@@ -24,21 +24,24 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(__dirname + '/public'));
 
 
-app.get('/', function(req, res) {
-  res.render('login');
+
+/// Note: we call the util.checkUser function inside our reqest method to check on the session
+
+app.get('/', util.checkUser, function(req, res) {
+  res.render('index');
 });
 
-app.get('/create', function(req, res) {
-  res.render('login');
+app.get('/create', util.checkUser,function(req, res) {
+  res.render('index');
 });
 
-app.get('/links', function(req, res) {
+app.get('/links', util.checkUser,function(req, res) {
   Links.reset().fetch().then(function(links) {
     res.status(200).send(links.models);
   });
 });
 
-app.post('/links', function(req, res) {
+app.post('/links', util.checkUser, function(req, res) {
   var uri = req.body.url;
 
   if (!util.isValidUrl(uri)) {
@@ -73,6 +76,19 @@ app.post('/links', function(req, res) {
 // Write your authentication routes here
 /************************************************************/
 
+// import the session module ;
+
+var session = require ('express-session');
+
+app.use(session({
+
+  secret: "nsnsdsodjsaduaspdumdfio[dysfysdfi[ohdfo['dhdff",
+  resave: false,
+  saveUninitialized: true
+}));
+
+
+
 app.get('/login', function(req, res){
   res.render('login');
 });
@@ -83,13 +99,16 @@ app.post('/login', function(req, res){
     if(model){
       bcrypt.compare(req.body.password, model.get('password'), function(err, result) {
         if(result){
+           console.log(result);
           // render the index
-          res.render('index');
+          util.createSession(req, res,  req.body.username);
         } else {
+         //res.redirect('/login');
           res.send('password or username not correct')
         }
       });
     } else {
+      //res.redirect('/login');
       res.send('username not found');
     }
   })
@@ -113,11 +132,12 @@ app.post('/signup', function(req, res){
     if (!model) {
       // add the data to the user table
       new User({ username: req.body.username, password: hashPassword}).save().then(function(){
-        res.render('index');
+        util.createSession(req, res,  req.body.username);
       });
     } else {
-      console.log('The User Already exist');
-       res.send('The User Already exist');
+      //res.redirect('/signup');
+      //console.log('The User Already exist');
+      res.send('The User Already exist');
     }
    });
     
